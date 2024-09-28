@@ -1,0 +1,6 @@
+This is the code repository of Kaleidoscope co-processor for neural-network-driven intelligent data-plane.
+
+It contains three folders:
+  Fix8_Quant for quantilization
+  Hardware for Kaleidoscope verilog implementation
+  Toolchain for Kaleidoscope translation scripts

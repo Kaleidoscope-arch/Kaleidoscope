@@ -2,5 +2,5 @@ This is the code repository of Kaleidoscope co-processor for neural-network-driv
 
 It contains three folders:
   Fix8_Quant for quantilization
-  Hardware for Kaleidoscope verilog implementation
+  Inference engine for Kaleidoscope verilog implementation
   Toolchain for Kaleidoscope translation scripts

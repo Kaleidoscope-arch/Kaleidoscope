@@ -7,7 +7,6 @@ from tqdm import tqdm
 from typing import Tuple, List, Any
 
 from dataset_11 import get_dataset, load_data, load_clean_data
-from preprocess_11 import PREFIX_TO_TRAFFIC_ID, PREFIX_TO_APP_ID, AUX_ID
 import pdb
 
 
@@ -15,6 +14,7 @@ def fixed_fwd_op(
         model: nn.Module,
         data_loader: DataLoader,
         device: str = 'cuda',
+        num_class: int = 2,
         overflow = False
 ) -> List[Tuple[float, Any, Any, Any, Any]]:
     """ Perform evaluation.
@@ -28,29 +28,23 @@ def fixed_fwd_op(
     Returns:
         Task metrics
     """
-    # if not torch.cuda.is_available():
-    #     print('Fail to use GPU')
-    #     device = 'cpu'
-    device = device
     model = model.to(device)
 
     model.eval()
-    # model.fixed_model()
     model.fullfix_model()
     task1_outputs = []
-    # pdb.set_trace()
 
     with torch.no_grad():
         pbar = tqdm(enumerate(data_loader), total=len(data_loader), desc=f"Evaluation")
-        for batch_idx, (inputs, labels_task1, labels_task2, labels_task3) in pbar:
+        for batch_idx, (inputs, labels) in pbar:
             inputs = inputs.to(device)
             outputs1 = model.fixed_fwd(inputs).cpu()
 
-            task1_outputs.append((outputs1, labels_task3))
+            task1_outputs.append((outputs1, labels))
 
     task_metrics = []
 
-    for task_outputs, n_classes in zip([task1_outputs], [len(PREFIX_TO_TRAFFIC_ID)]):        
+    for task_outputs, n_classes in zip([task1_outputs], [num_class]):        
         total_loss = 0.0
         total_batches = 0
 
@@ -107,11 +101,8 @@ def fix_train_op(
     Returns:
 
     """
-    # if not torch.cuda.is_available():
-    #     print('Fail to use GPU')
     device = device
 
-    # assert len(task_weights) == 3, 'Length of task weights should be 3'
 
     # Load raw data
     train_data_rows, val_data_rows, test_data_rows = load_data()
@@ -130,19 +121,6 @@ def fix_train_op(
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0001)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=10)
-
-    # Use wandb to record training log
-    if use_wandb:
-        import wandb
-        run = wandb.init(project="MTC")
-        config = run.config
-        config['model'] = model.__class__.__name__
-        config['dataset'] = "ISCX"
-        run.watch(model)
-        log_interval = 1000
-    else:
-        run = None
-        log_interval = None
 
     # Initialize accuracy to save best model
     best_accuracy = 0.0
@@ -163,14 +141,11 @@ def fix_train_op(
             model.train()
             inputs = inputs.to(device)
             outputs_task1 = model.fixed_fwd(inputs)
-            # outputs_task1 = model(inputs)
             loss_task1 = F.cross_entropy(outputs_task1, labels_task3.to(device))
 
             # Backpropagation and update model parameters
             loss_task1.backward()
             optimizer.step()
-            # print(model.linear1.weight.grad)
-            # pdb.set_trace()
             optimizer.zero_grad()
             
             running_loss += loss_task1.item()
@@ -179,11 +154,6 @@ def fix_train_op(
             # Update the description of progress bar with the average loss
             pbar.set_description(f"Epoch {epoch + 1}, Loss: {avg_loss:.4f}")
             pbar.set_postfix(loss=avg_loss)
-
-            # Log loss to wandb if enable
-            if use_wandb:
-                if batch_idx % log_interval == 0:
-                    run.log({"loss": avg_loss})
 
         # Evaluation after each epoch
         metrics = fixed_fwd_op(model, val_data_loader)
@@ -194,24 +164,13 @@ def fix_train_op(
             print(f"Task {task_i + 1} - Validation Loss: {m[0]:.4f}, "
                   f"Precision: {m[1]:.4f}, Recall: {m[2]:.4f}, F1: {m[3]:.4f} , Accuracy: {m[4]:.4f}")
 
-            # Log task metrics to wandb if enable
-            if use_wandb:
-                run.log({f'task_{task_i}/loss': m[0]})
-                run.log({f'task_{task_i}/precision': m[1]})
-                run.log({f'task_{task_i}/recall': m[2]})
-                run.log({f'task_{task_i}/f1': m[3]})
-                run.log({f'task_{task_i}/accuracy': m[4]})
-
             # Record task accuracy
             task_accuracy.append(m[4])
 
         # Save best model according to the accuracy of 'application'
         target_accuracy = task_accuracy[0]
         if target_accuracy >= best_accuracy:
-            torch.save(model.state_dict(), './winter_weights/FromSractchFullFloorWFix_8_32_64_32.pt')
-            # torch.save(model.state_dict(), 'WFix_8_32_64_32.pt')
-            # torch.save(model.state_dict(), 'actfix8_32_64_32.pt')
-            # Update best accuracy
+            torch.save(model.state_dict(), './fix8_weights.pt')
             best_accuracy = target_accuracy
 
         # Update scheduler to modify learning rate

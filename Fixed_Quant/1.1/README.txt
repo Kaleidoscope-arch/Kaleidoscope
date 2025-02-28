@@ -1,16 +1,36 @@
-fully_fix_MLP.py:
-The example of model define, implementation and loading
-    The forwarding implementation of Fix-8
-    The Fix-8 quantization on model parameters and feature
-    The export of model parameters and feature for validation
-    Training and inference
+v1.1版本更新 2024/8/22
+更新内容：
 
-fully_fix_linear.py:
-The Fix-8 quantization library, includes
-    All Fix-8-based GEMM, which are decomposed into element-wise multiplication, accmulation
-    All operations above are Fix-8-based
-    The data quantization process, consisting Fix-8 transform and overflow.
+fully_fix_linear.py
+    对sum环节进行了细致的拆分和fix化，原因是硬件在累加过程中会产生溢出，
+    为了和硬件保持匹配，因此在逐步累加过程中加入了fix_x
 
-train_MLP.py:
-The example of Fix-8 QAT
+
+
+----------------------------------------------------------
+
+和定点量化相关的文件：
+
+fully_fix_MLP.py
+主文件，包含：
+    模型的定义、实现、加载
+    fix下的forward实现
+    模型参数的fix化、计算特征的fix化
+    模型参数的导出、计算特征的导出
+    主程序：训练和推理
+
+
+fully_fix_linear.py
+fix相关库，包含：
+    linear操作的fix化，拆解成element-wise, accmulate, bias-add
+    上述所有三个操作过程中的数据全部fix化
+    fix化的库，可以实现对定点化、上溢、下溢的处理
+
+train_MLP.py
+训练和推理库，包含：
+    数据集的加载
+    任务类型的选择
+    fix后的QAT和推理
+    需要注意保存模型的名字不要冲突！
+    batch=512时，模型收敛效果较好
 

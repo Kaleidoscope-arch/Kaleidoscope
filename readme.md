@@ -123,3 +123,34 @@ VPE_top // the top of FPE, in VPE_top.v
     |----   VPE_Vector_Adder // inline accumulator of FPE, in VPE_Vector_Adder.v
     |----   VPE_ReLU // ReLU activation module of FPE, in VPE_ReLU.v
 ```
+
+
+## Traffic Feature Extractor (TFE)
+
+Our TFE hardware is designed based on the decomposing
+and sharing method. It comprises a two-stage pipeline, a
+**flow-tracker**, and the **shared memory**, and a module named ALU_cluster generates the final extracted feature.
+We use the hash value of an IP tuple (hash) and the hash value of its reversedirection
+(r_hash) to identify a network flow.
+
+
+### Code Organization
+Codes related to FPE implementation is in the **FPE** folder.
+
+
+```
+TFE_top // the top of TFE, in VPE_top.v
+    |----   wine_Dispenser // the parser of input traffic, spliting header and payload, in Wine_Dispenser.v 
+    |----   hash_module // hash function module with CRC32, in Hashing.v
+    |----   meta_gen // producing pkt_arvt and stores other meta feature from Wine_dispenser, in Meta_Gen.v
+    |----   tfe_kernel // the kernel of TFE, in TFE_Kernel.v
+    |           |----   flow_tracker, tracking state of current and history traffic, in flow_tracker.v
+    |                       |----   Tracker // the implementation of state tracking, in tracker.v
+    |           |----   Main_Feature_Cache_Module // the shared memory, in Extreme_Val_Memory_Module.v
+    |           |----   Buffer2alu // data buffer between the shared memory and alu_cluster, in buffer2alu.v
+    |           |----   ALU_Cluster // integrating different alu operators, in ALU_Cluster.v
+    |                       |----   Max_Min_Alu // the implementation of max/min feature extractor, in Max_Min_Alu.v
+    |                       |----   Average_Val_Unit // the feature extractor with averaging values, in Average_Val_Unit.v
+    |                       |----   Vec_Feature_Unit // the feature extractor with time-series, in Vec_Feature_Unit.v
+
+```
